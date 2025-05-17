@@ -23,7 +23,7 @@ final class WeatherCellCollection: UICollectionViewCell {
     lazy var hourWeather: UILabel = {
         let label = UILabel()
         label.font = UIFont.systemFont(ofSize: 17)
-        label.textColor = .white
+        label.textColor = UIColor(named: "ColorTextBlackAndWhite")
         return label
     }()
     
@@ -31,7 +31,7 @@ final class WeatherCellCollection: UICollectionViewCell {
     lazy var temperature: UILabel = {
         let label = UILabel()
         label.font = UIFont.boldSystemFont(ofSize: 19)
-        label.textColor = .white
+        label.textColor = UIColor(named: "ColorTextBlackAndWhite")
         return label
     }()
     

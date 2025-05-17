@@ -9,7 +9,6 @@ import UIKit
 import SnapKit
 
 final class WeatherSevenDaysCell: UITableViewCell {
-
     
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
@@ -24,7 +23,7 @@ final class WeatherSevenDaysCell: UITableViewCell {
     lazy var dateText: UILabel = {
         let label = UILabel()
         label.font = UIFont.boldSystemFont(ofSize: 20)
-        label.textColor = .white
+        label.textColor = UIColor(named: "ColorTextBlackAndWhite")
         return label
     }()
     
@@ -32,7 +31,7 @@ final class WeatherSevenDaysCell: UITableViewCell {
     lazy var maxTemp: UILabel = {
         let label = UILabel()
         label.font = UIFont.boldSystemFont(ofSize: 18)
-        label.textColor = .white
+        label.textColor = UIColor(named: "ColorTextBlackAndWhite")
         return label
     }()
     
@@ -77,13 +76,12 @@ extension WeatherSevenDaysCell {
         }
         iconWeather.snp.makeConstraints { make in
             make.centerY.equalToSuperview()
-            make.left.equalTo(dateText.snp.right).inset(-35)
+            make.right.equalTo(minTemp.snp.right).offset(-50)
             make.height.width.equalTo(35)
-            
         }
         minTemp.snp.makeConstraints { make in
             make.centerY.equalToSuperview()
-            make.left.equalTo(iconWeather.snp.right).inset(-35)
+            make.right.equalTo(maxTemp.snp.left).offset(-150)
         }
         maxTemp.snp.makeConstraints { make in
             make.centerY.equalToSuperview()

@@ -10,6 +10,8 @@ import SnapKit
 
 final class StartView: UIView {
     
+    var tableViewHeightConstraint: Constraint?
+    
     override init(frame: CGRect) {
         super.init(frame: frame)
         backgroundColor = UIColor.systemBackground
@@ -31,7 +33,7 @@ final class StartView: UIView {
         
         let collectionView = UICollectionView(frame: CGRect.zero, collectionViewLayout: layout)
         collectionView.register(WeatherCellCollection.self, forCellWithReuseIdentifier: "WeatherCellCollection")
-        collectionView.backgroundColor = UIColor(red: 0.63, green: 0.67, blue: 0.68, alpha: 1.00)
+        collectionView.backgroundColor = UIColor.systemBackground
         collectionView.layer.cornerRadius = 12
         collectionView.layer.masksToBounds = true
         collectionView.showsHorizontalScrollIndicator = false
@@ -41,7 +43,7 @@ final class StartView: UIView {
     //     tableCell
     lazy var tableView: UITableView = {
         let tableView = UITableView(frame: CGRect.zero, style: .plain)
-        tableView.backgroundColor = UIColor.green
+        tableView.backgroundColor = UIColor.systemBackground
         tableView.separatorColor = .darkGray
         tableView.separatorInset = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 16)
         tableView.register(WeatherSevenDaysCell.self, forCellReuseIdentifier: "WeatherSevenDaysCell")
@@ -49,9 +51,9 @@ final class StartView: UIView {
     }()
     
     //    заголовок
-    private lazy var labelHeadline: UILabel = {
+    lazy var labelHeadline: UILabel = {
          let label = UILabel()
-        label.text = "Текущее местоположение"
+        label.text = "Загрузка местоположения"
         label.textColor = UIColor(named: "ColorTextBlackAndWhite")
         label.font = UIFont.boldSystemFont(ofSize: 28)
         label.textAlignment = .center
@@ -85,6 +87,12 @@ final class StartView: UIView {
         return label
     }()
     
+//    индикатор загрузки
+    lazy var activityIndicator: UIActivityIndicatorView = {
+        let indicator = UIActivityIndicatorView(style: .medium)
+        return indicator
+    }()
+    
 }
 
 //MARK: - SetupLoyout
@@ -96,6 +104,7 @@ extension StartView {
         addSubview(maxAndMinTemp)
         addSubview(collectionView)
         addSubview(tableView)
+        addSubview(activityIndicator)
         setupConstraint()
     }
     
@@ -103,6 +112,10 @@ extension StartView {
         labelHeadline.snp.makeConstraints { make in
             make.top.equalToSuperview().inset(85)
             make.centerX.equalToSuperview()
+        }
+        activityIndicator.snp.makeConstraints { make in
+            make.centerX.equalToSuperview()
+            make.top.equalTo(labelHeadline.snp.bottom).inset(-18)
         }
         nameCity.snp.makeConstraints { make in
             make.top.equalTo(labelHeadline.snp.bottom).inset(-7)
@@ -122,9 +135,9 @@ extension StartView {
             make.height.equalTo(136)
         }
         tableView.snp.makeConstraints { make in
-            make.top.equalTo(collectionView.snp.bottom).inset(-35)
+            make.top.equalTo(collectionView.snp.bottom).inset(-15)
             make.left.right.equalToSuperview().inset(15)
-            make.height.equalTo(400)
+            self.tableViewHeightConstraint = make.height.equalTo(0).constraint
         }
     }
 }

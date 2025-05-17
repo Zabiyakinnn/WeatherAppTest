@@ -12,89 +12,69 @@ final class StartViewModel: NSObject {
     
     let locationManager = CLLocationManager()
     var onWeatherUpdate: ((Location, Current, Forecast) -> Void)?
+    
     var onWeatherFewDays: (([ForecastDay]) -> Void)?
+    var onShowAlert: ((UIAlertController) -> Void)?
     
-    func locationRequest() {
+    private var network = NetworkManager.shared
+    
+//    запрос геолокации
+    func start() {
         locationManager.delegate = self
-        locationManager.desiredAccuracy = kCLLocationAccuracyBest
-        locationManager.requestWhenInUseAuthorization()
-        locationManager.startUpdatingLocation()
+        let lat = 55.7558
+        let lon = 37.6173
+        
+        let status = CLLocationManager.authorizationStatus()
+        switch status {
+        case .notDetermined:
+            locationManager.requestWhenInUseAuthorization()
+
+        case .authorizedWhenInUse, .authorizedAlways:
+            locationManager.startUpdatingLocation()
+
+        case .restricted, .denied:
+            print("Геолокация запрещена, используем координаты Москвы")
+            requestWeather(lat: lat, lon: lon)
+
+        @unknown default:
+            print("Неизвестный статус геолокации")
+            requestWeather(lat: lat, lon: lon)
+        }
     }
     
-    
-    /// Запрос в сеть для получения прогноза погоды сегодняшнего дня
-    /// - Parameters:
-    ///   - lat: широта
-    ///   - lon: долгота
-    private func requestWeather(lat: Double, lon: Double, completion: @escaping(Location?, Current?, Forecast?) -> Void) {
-        let apiKey = "fa8b3df74d4042b9aa7135114252304"
-        let urlString = "https://api.weatherapi.com/v1/forecast.json?key=\(apiKey)&q=\(lat),\(lon)"
+//    прогноз погоды
+    private func requestWeather(lat: Double, lon: Double) {
         
-        guard let url = URL(string: urlString) else {
-//            вывод ошибки
-            print("Неверный URL")
-            return
-        }
-        let task = URLSession.shared.dataTask(with: url) { data, responce, error in
+        network.requestWeather(lat: lat, lon: lon) { [weak self] location, current, forecast, error in
+            guard let self = self else { return }
+            
             if let error = error {
-                print("Ошибка запроса: \(error.localizedDescription)")
-                return
+                print("Ошибка загрузки \(error.localizedDescription)")
+                
+                DispatchQueue.main.async {
+                    self.showRetryAlert(lat: lat, lon: lon)
+                }
             }
             
-            guard let data = data else {
-                print("Ошибка получения данных")
-                return
-            }
+            guard let location = location,
+                  let current = current,
+                  let forecast = forecast else { return }
             
-            do {
-                let decoder = JSONDecoder()
-                let response = try decoder.decode(WeatherResponse.self, from: data)
-                completion(response.location, response.current, response.forecast)
-            } catch {
-                print("Ошибка парсинга: \(error.localizedDescription)")
-                completion(nil, nil, nil)
+            DispatchQueue.main.async {
+                self.onWeatherUpdate?(location, current, forecast)
             }
         }
         
-        task.resume()
+        network.requestWeatherFewDays(lat: lat, lon: lon) { [weak self] forecastDay in
+            guard let self = self else { return }
+            
+            DispatchQueue.main.async {
+                self.onWeatherFewDays?(forecastDay)
+            }
+        }
+        
+        locationManager.stopUpdatingLocation()
     }
-    
-    /// Запрос в сеть для получения прогноза на несколько дней
-    /// - Parameters:
-    ///   - lat: широта
-    ///   - lon: долгота
-    private func requestWeatherFewDays(lat: Double, lon: Double, completion: @escaping([ForecastDay]) -> Void) {
-        let apiKey = "fa8b3df74d4042b9aa7135114252304"
-        let urlString = "https://api.weatherapi.com/v1/forecast.json?key=\(apiKey)&q=\(lat),\(lon)&days=7"
-        
-        guard let url = URL(string: urlString) else {
-//            вывод ошибки
-            print("Неверный URL")
-            return
-        }
-        let task = URLSession.shared.dataTask(with: url) { data, responce, error in
-            if let error = error {
-                print("Ошибка запроса: \(error.localizedDescription)")
-                return
-            }
-            
-            guard let data = data else {
-                print("Ошибка получения данных")
-                return
-            }
-            
-            do {
-                let decoder = JSONDecoder()
-                let response = try decoder.decode(WeatherResponse.self, from: data)
-                completion(response.forecast.forecastday)
-            } catch {
-                print("Ошибка парсинга: \(error.localizedDescription)")
-            }
-        }
-        
-        task.resume()
-    }
-    
     
     /// загрузка иконки погоды
     /// - Parameters:
@@ -125,6 +105,22 @@ final class StartViewModel: NSObject {
         }
         task.resume()
     }
+//    
+//    func stringToDate(dateString: String) -> Date {
+//        let dateFormatter = DateFormatter()
+//        dateFormatter.dateFormat = "yyyy-MM-dd"
+//        
+//        let date = dateFormatter.date(from: dateString) ?? Date()
+//        switch date {
+//        case Calendar.current.isDateInToday(date):
+//            return "Сегодня"
+//        default:
+//            <#code#>
+//        }
+//        
+//        print(date)
+//        return date
+//    }
     
     
     /// форматирование полученной даты
@@ -133,20 +129,40 @@ final class StartViewModel: NSObject {
     func formatterDate(_ dateString: String) -> String {
         let inputFormatter = DateFormatter()
         inputFormatter.dateFormat = "yyyy-MM-dd"
-        inputFormatter.locale = Locale(identifier: "en_US_POSIX") // надёжная локаль
+        inputFormatter.locale = Locale(identifier: "en_US_POSIX")
 
         let outputFormatter = DateFormatter()
         outputFormatter.dateFormat = "dd.MM"
         
         if let date = inputFormatter.date(from: dateString) {
-            return outputFormatter.string(from: date)
+            switch true {
+            case Calendar.current.isDateInToday(date):
+                return "Сегодня"
+            case Calendar.current.isDateInTomorrow(date):
+                return "Завтра"
+            default:
+                return outputFormatter.string(from: date)
+            }
         } else {
             return dateString
         }
     }
     
+    private func showRetryAlert(lat: Double, lon: Double) {
+        let alert = UIAlertController(title: "Ошибка",
+                                      message: "Не удалось загрузить данные. Повторить попытку?",
+                                      preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "Повторить", style: .default, handler: { [weak self] _ in
+            self?.requestWeather(lat: lat, lon: lon)
+        }))
+        
+        alert.addAction(UIAlertAction(title: "Отмена", style: .cancel))
+        
+        onShowAlert?(alert)
+    }
 }
 
+//MARK: CLLocationManagerDelegate
 extension StartViewModel: CLLocationManagerDelegate {
 //    получение координат
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
@@ -155,31 +171,17 @@ extension StartViewModel: CLLocationManagerDelegate {
         }
         
         print("Полученные координаты: - Широта \(coordinates.latitude), Долгота \(coordinates.longitude)")
-        
-        requestWeather(lat: coordinates.latitude, lon: coordinates.longitude) { [weak self] location, current, forecast in
-            guard let self = self,
-                  let location = location,
-                  let current = current,
-                  let forecast = forecast else { return }
-            
-            DispatchQueue.main.async {
-                self.onWeatherUpdate?(location, current, forecast)
-            }
-        }
-        
-        requestWeatherFewDays(lat: coordinates.latitude, lon: coordinates.longitude) { [weak self] forecastDay in
-            guard let self = self else { return }
-            
-            DispatchQueue.main.async {
-                self.onWeatherFewDays?(forecastDay)
-            }
-        }
-        locationManager.stopUpdatingLocation()
+        requestWeather(lat: coordinates.latitude, lon: coordinates.longitude)
     }
     
     
-//   обработка ошибок
+//   вывод ошибки
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
         print("Ошибка получения координат \(error.localizedDescription)")
+
+    }
+
+    func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
+        start()
     }
 }
