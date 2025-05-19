@@ -105,23 +105,6 @@ final class StartViewModel: NSObject {
         }
         task.resume()
     }
-//    
-//    func stringToDate(dateString: String) -> Date {
-//        let dateFormatter = DateFormatter()
-//        dateFormatter.dateFormat = "yyyy-MM-dd"
-//        
-//        let date = dateFormatter.date(from: dateString) ?? Date()
-//        switch date {
-//        case Calendar.current.isDateInToday(date):
-//            return "Сегодня"
-//        default:
-//            <#code#>
-//        }
-//        
-//        print(date)
-//        return date
-//    }
-    
     
     /// форматирование полученной даты
     /// - Parameter dateString: дата

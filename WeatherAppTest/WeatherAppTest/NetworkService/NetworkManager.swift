@@ -20,7 +20,7 @@ final class NetworkManager {
     func requestWeather(lat: Double, lon: Double, completion: @escaping(Location?, Current?, Forecast?, Error?) -> Void) {
         let apiKey = "fa8b3df74d4042b9aa7135114252304"
         let urlString = "https://api.weatherapi.com/v1/forecast.json?key=\(apiKey)&q=\(lat),\(lon)&days=2"
-        
+
         guard let url = URL(string: urlString) else {
 //            вывод ошибки
             print("Неверный URL")
